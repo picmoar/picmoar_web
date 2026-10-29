@@ -1,0 +1,14 @@
+{
+  "title": "Photo Title",
+  "place": "City, Country",
+  "date": "Mon YYYY",
+  "story": "Write the story behind this photo here — where you were standing, what you waited for, and why this frame stayed.",
+  "meta": [
+    { "k": "Camera", "v": "Camera Model" },
+    { "k": "Lens",   "v": "Focal Length f/X" },
+    { "k": "Aperture", "v": "f/X" },
+    { "k": "Shutter",  "v": "1/Xs" },
+    { "k": "ISO",      "v": "400" },
+    { "k": "Location", "v": "City, Country" }
+  ]
+}

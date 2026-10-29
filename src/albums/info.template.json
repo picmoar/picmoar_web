@@ -1,0 +1,6 @@
+{
+  "title": "Album Title",
+  "year": 2024,
+  "description": "A short description of this album.",
+  "photos": ["01", "02"]
+}

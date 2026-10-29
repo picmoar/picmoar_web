@@ -1,0 +1,20 @@
+/* Fonts: Archivo (headings) + Source Sans 3 (body) + IBM Plex Mono (mono) */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #0d0c0b;
+  color: #ecebe7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* PicMoAr tile/card hover filters */
+[data-tile]:hover .pic-tile-frame {
+  filter: grayscale(0) brightness(1.05) !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(236,235,231,.25) !important;
+}
+[data-card]:hover .pic-card-frame {
+  filter: grayscale(0) brightness(1.05) !important;
+}
