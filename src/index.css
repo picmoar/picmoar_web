@@ -10,6 +10,55 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Safelight glow — dancing darkroom light blobs */
+@keyframes sl-drift-1 {
+  0%   { transform: translate(0%,    0%)   scale(1);    opacity: .72; }
+  20%  { transform: translate(9%,  -14%)   scale(1.12); opacity: .88; }
+  45%  { transform: translate(-6%,  11%)   scale(.93);  opacity: .62; }
+  70%  { transform: translate(13%,   6%)   scale(1.07); opacity: .82; }
+  100% { transform: translate(0%,    0%)   scale(1);    opacity: .72; }
+}
+@keyframes sl-drift-2 {
+  0%   { transform: translate(0%,   0%)   scale(1);    opacity: .52; }
+  30%  { transform: translate(-11%,  9%)   scale(1.18); opacity: .68; }
+  65%  { transform: translate(7%,  -7%)   scale(.88);  opacity: .44; }
+  100% { transform: translate(0%,   0%)   scale(1);    opacity: .52; }
+}
+@keyframes sl-drift-3 {
+  0%   { transform: translate(0%,   0%)   scale(1);    opacity: .38; }
+  38%  { transform: translate(6%,   16%)  scale(1.22); opacity: .56; }
+  72%  { transform: translate(-9%,  -4%)  scale(.82);  opacity: .30; }
+  100% { transform: translate(0%,   0%)   scale(1);    opacity: .38; }
+}
+
+.sl-blob {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+.sl-blob-1 {
+  width: 75vw; height: 75vh;
+  left: -18vw; top: -22vh;
+  background: radial-gradient(ellipse at center,
+    rgba(155,18,4,.58) 0%, rgba(100,8,2,.22) 42%, transparent 68%);
+  animation: sl-drift-1 20s ease-in-out infinite;
+}
+.sl-blob-2 {
+  width: 60vw; height: 65vh;
+  right: -12vw; bottom: -18vh;
+  background: radial-gradient(ellipse at center,
+    rgba(140,25,4,.42) 0%, rgba(85,10,2,.16) 44%, transparent 70%);
+  animation: sl-drift-2 17s ease-in-out infinite;
+}
+.sl-blob-3 {
+  width: 42vw; height: 48vh;
+  left: 28vw; top: 18vh;
+  background: radial-gradient(ellipse at center,
+    rgba(170,35,8,.28) 0%, transparent 65%);
+  animation: sl-drift-3 13s ease-in-out infinite;
+}
+
 /* PicMoAr tile/card hover filters */
 [data-tile]:hover .pic-tile-frame {
   filter: grayscale(0) brightness(1.05) !important;

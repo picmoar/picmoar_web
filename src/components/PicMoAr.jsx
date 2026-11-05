@@ -396,7 +396,12 @@ export default function PicMoAr() {
         onMouseLeave={() => { mxR.current = null }}
         onTouchStart={e => { const t=e.touches[0]; tx0R.current=t.clientX; ty0R.current=t.clientY }}
         onTouchMove={e => { const t=e.touches[0]; oxR.current+=t.clientX-tx0R.current; oyR.current+=t.clientY-ty0R.current; tx0R.current=t.clientX; ty0R.current=t.clientY }}
-        style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 50%, #161412 0%, #0d0c0b 70%)', cursor: 'crosshair' }}>
+        style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#0d0c0b', cursor: 'crosshair' }}>
+
+        {/* Safelight glow */}
+        <div className="sl-blob sl-blob-1" />
+        <div className="sl-blob sl-blob-2" />
+        <div className="sl-blob sl-blob-3" />
 
         <div ref={planeRef} style={{ position: 'absolute', inset: 0 }}>
           {TILES.map(t => (
@@ -424,11 +429,13 @@ export default function PicMoAr() {
       </div>
 
       {/* Collections */}
-      <section style={{ position: 'relative', padding: '112px 32px 96px', borderTop: '1px solid #2a2724', display: 'flex', flexDirection: 'column', gap: 40 }}>
+      <section style={{ position: 'relative', padding: '96px 32px 56px', borderTop: '1px solid #2a2724', display: 'flex', flexDirection: 'column', gap: 32, overflow: 'hidden' }}>
+        {/* World contours background */}
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/world-contours.svg)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', filter: 'sepia(1) hue-rotate(320deg) saturate(2) brightness(0.7)', opacity: 0.15, pointerEvents: 'none' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: 'oklch(0.68 0.17 32)', letterSpacing: '.08em', textTransform: 'uppercase' }}>Albums</div>
-            <h2 style={{ margin: 0, fontWeight: 800, fontSize: 'clamp(40px,6vw,72px)', lineHeight: .95, letterSpacing: '-.03em' }}>Collections</h2>
+            <h2 style={{ margin: 0, fontWeight: 800, fontSize: 'clamp(28px,4vw,52px)', lineHeight: .95, letterSpacing: '-.03em' }}>Collections</h2>
           </div>
           <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>Drag to spin · Click to focus</div>
         </div>
@@ -437,7 +444,7 @@ export default function PicMoAr() {
           onPointerDown={handleRingDown}
           onMouseMove={e => { const r=e.currentTarget.getBoundingClientRect(); tmxR.current=(e.clientX-r.left)/r.width*2-1; tmyR.current=(e.clientY-r.top)/r.height*2-1 }}
           onMouseLeave={() => { tmxR.current=0; tmyR.current=0 }}
-          style={{ height: 620, perspective: 1500, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', touchAction: 'none', userSelect: 'none' }}>
+          style={{ height: 460, perspective: 1500, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', touchAction: 'none', userSelect: 'none' }}>
           <div data-ring="1" style={{ position: 'relative', width: 220, height: 300, transformStyle: 'preserve-3d' }}>
             {ALBUMS.map(a => (
               <div key={a.i} data-card={a.i}
