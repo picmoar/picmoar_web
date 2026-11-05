@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import manifest from '../data/cloudinary_manifest.json'
 
 const COLS = 10, ROWS = 8, CW = 210, CH = 265, W = COLS*CW, H = ROWS*CH, PAD = 240
 const TARGET_AREA = 38000, MAX_W = 360, MAX_H = 240
@@ -6,17 +7,22 @@ const COLL_W = 255, COLL_H = 215  // collision box — matches typical photo siz
 
 function rnd(s) { const x = Math.sin(s*999.13)*43758.5453; return x - Math.floor(x) }
 
-const allJpgModules = import.meta.glob('../photos/*/*.{jpg,jpeg,JPG,JPEG}', { import: 'default', eager: true })
-const infoModules   = import.meta.glob('../photos/*/info.json',    { import: 'default', eager: true })
-
-const photoSrcByFolder = {}
-for (const [path, url] of Object.entries(allJpgModules)) {
-  const folder = path.match(/\/photos\/([^/]+)\//)[1]
-  if (!photoSrcByFolder[folder]) photoSrcByFolder[folder] = url
+// Insert Cloudinary transformations into a URL:
+// https://res.cloudinary.com/cloud/image/upload/TRANSFORMS/public_id.jpg
+function clUrl(src, transforms) {
+  return src.replace('/image/upload/', `/image/upload/${transforms}/`)
 }
+const thumb  = src => clUrl(src, 'f_auto,q_auto,w_500')   // canvas tiles
+const cover  = src => clUrl(src, 'f_auto,q_auto,w_800')   // album ring covers
+const medium = src => clUrl(src, 'f_auto,q_auto,w_900')   // album detail grid
+const full   = src => clUrl(src, 'f_auto,q_auto,w_1800')  // lightbox / fullscreen
 
-const DATA = Object.entries(photoSrcByFolder)
-  .map(([num, src]) => {
+const infoModules = import.meta.glob('../photos/*/info.json', { import: 'default', eager: true })
+
+const photoSrcByFolder = Object.fromEntries(manifest.photos.map(p => [p.num, p.src]))
+
+const DATA = manifest.photos
+  .map(({ num, src }) => {
     const info = infoModules[`../photos/${num}/info.json`] ?? {}
     return {
       num, src,
@@ -87,37 +93,23 @@ const TILES = DATA.length === 0 ? [] : (() => {
   })
 })()
 
-const albumInfoModules = import.meta.glob('../albums/*/info.json',        { import: 'default', eager: true })
-const albumJpgModules  = import.meta.glob('../albums/*/*.{jpg,jpeg,JPG,JPEG}', { import: 'default', eager: true })
-
-const albumPhotosByFolder = {}
-const albumCoverByFolder = {}
-for (const [path, url] of Object.entries(albumJpgModules)) {
-  const folder = path.match(/\/albums\/([^/]+)\//)[1]
-  const stem = path.split('/').pop().replace(/\.[^.]+$/, '').toLowerCase()
-  if (stem === 'cover_photo') {
-    albumCoverByFolder[folder] = url
-  } else {
-    if (!albumPhotosByFolder[folder]) albumPhotosByFolder[folder] = []
-    albumPhotosByFolder[folder].push(url)
-  }
-}
+const albumInfoModules = import.meta.glob('../albums/*/info.json', { import: 'default', eager: true })
 
 const ALBUMS = Object.entries(albumInfoModules)
   .map(([path, info]) => {
     const folder     = path.match(/\/([^/]+)\/info\.json$/)[1]
     const num        = folder.split('_')[0]
-    const directSrcs = albumPhotosByFolder[folder] ?? []
+    const { coverSrc: manifestCover, imageSrcs } = manifest.albums[folder] ?? { coverSrc: null, imageSrcs: [] }
     const refNums    = info.photos ?? []
-    const coverSrc   = albumCoverByFolder[folder] ?? directSrcs[0] ?? (refNums[0] ? photoSrcByFolder[refNums[0]] : null) ?? null
+    const coverSrc   = manifestCover ?? imageSrcs[0] ?? (refNums[0] ? photoSrcByFolder[refNums[0]] : null) ?? null
     return {
       num, folder,
       title:       info.title       ?? (folder.split('_').slice(1).join(' ') || `Album ${num}`),
       year:        info.year        ?? '',
       description: info.description ?? '',
       photos:      refNums,
-      directSrcs,
-      count:       directSrcs.length + refNums.length,
+      directSrcs:  imageSrcs,
+      count:       imageSrcs.length + refNums.length,
       coverSrc
     }
   })
@@ -205,7 +197,7 @@ function CanvasTile({ t, onOpen }) {
     <div data-tile={t.i} onClickCapture={onOpen}
       style={{ position: 'absolute', left: 0, top: 0, width: dw, display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer', willChange: 'transform' }}>
       <div className="pic-tile-frame" style={{ filter: 'grayscale(1) brightness(.85)', transition: 'filter .5s ease, box-shadow .5s ease', boxShadow: '0 20px 60px rgba(0,0,0,.55)' }}>
-        <img src={t.src} alt={t.num} onLoad={onLoad}
+        <img src={thumb(t.src)} alt={t.num} onLoad={onLoad}
           style={{ width: '100%', height: 'auto', display: 'block' }} />
       </div>
       <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 10, letterSpacing: '.04em', color: '#8d8a84', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.num} {t.title}</div>
@@ -452,7 +444,7 @@ export default function PicMoAr() {
                 onClickCapture={e => { e.stopPropagation(); e.preventDefault(); if(rMovedR.current>6)return; ringClick(a.i) }}
                 style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 12, willChange: 'transform,opacity' }}>
                 <div className="pic-card-frame" style={{ flex: 1, minHeight: 0, position: 'relative', filter: 'grayscale(1) brightness(.85)', transition: 'filter .5s ease', boxShadow: '0 30px 70px rgba(0,0,0,.6)', outline: '1px solid rgba(236,235,231,.08)' }}>
-                  <PhotoSlot src={a.coverSrc} placeholder={`album ${a.num}`} />
+                  <PhotoSlot src={a.coverSrc ? cover(a.coverSrc) : null} placeholder={`album ${a.num}`} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#8d8a84' }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
@@ -492,7 +484,7 @@ export default function PicMoAr() {
               <div key={photo.type === 'direct' ? `d-${idx}` : photo.num}
                 onClick={() => setAlbumPhotoOpen(idx)}
                 style={{ cursor: 'pointer', breakInside: 'avoid', marginBottom: 12 }}>
-                <img src={photo.src} alt={photo.title ?? ''}
+                <img src={medium(photo.src)} alt={photo.title ?? ''}
                   style={{ width: '100%', height: 'auto', display: 'block', filter: 'grayscale(1) brightness(.85)', transition: 'filter .3s' }}
                   onMouseEnter={e => e.currentTarget.style.filter = 'none'}
                   onMouseLeave={e => e.currentTarget.style.filter = 'grayscale(1) brightness(.85)'} />
@@ -507,7 +499,7 @@ export default function PicMoAr() {
       {albumPhotoOpen != null && currentAlbum && (
         <div onClick={() => setAlbumPhotoOpen(null)}
           style={{ position: 'fixed', inset: 0, zIndex: 150, background: 'rgba(13,12,11,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img src={currentAlbumPhotos[albumPhotoOpen]?.src} style={{ maxWidth: '88vw', maxHeight: '88vh', objectFit: 'contain' }} onClick={e => e.stopPropagation()} />
+          <img src={currentAlbumPhotos[albumPhotoOpen]?.src ? full(currentAlbumPhotos[albumPhotoOpen].src) : undefined} style={{ maxWidth: '88vw', maxHeight: '88vh', objectFit: 'contain' }} onClick={e => e.stopPropagation()} />
           {currentAlbumPhotos.length > 1 && <>
             <div style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)' }} onClick={e => e.stopPropagation()}>
               <NavBtn onClick={() => setAlbumPhotoOpen(i => (i - 1 + currentAlbumPhotos.length) % currentAlbumPhotos.length)}>←</NavBtn>
@@ -536,12 +528,12 @@ export default function PicMoAr() {
         }}>
           {isMobile ? (
             <div style={{ position: 'relative', width: '100%', height: '65vw', flexShrink: 0, background: '#0d0c0b' }}>
-              <PhotoSlot src={cur.src} placeholder={cur.num} fit="contain" />
+              <PhotoSlot src={full(cur.src)} placeholder={cur.num} fit="contain" />
             </div>
           ) : (
             <div style={{ position: 'relative', padding: 'clamp(20px,4vw,72px) clamp(16px,3vw,48px)', display: 'flex', minHeight: 'min(70vh,100%)', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box', flexGrow: 1 }}>
               <div style={{ flex: 1, minHeight: 0, minWidth: 0, height: '100%', position: 'relative' }}>
-                <PhotoSlot src={cur.src} placeholder={cur.num} fit="contain" />
+                <PhotoSlot src={full(cur.src)} placeholder={cur.num} fit="contain" />
               </div>
             </div>
           )}

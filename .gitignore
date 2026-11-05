@@ -2,3 +2,18 @@ node_modules
 dist
 .DS_Store
 *.local
+
+# Images are served from Cloudinary — keep local copies but don't commit them
+src/photos/**/*.jpg
+src/photos/**/*.jpeg
+src/photos/**/*.JPG
+src/photos/**/*.JPEG
+src/photos/**/*.png
+src/albums/**/*.jpg
+src/albums/**/*.jpeg
+src/albums/**/*.JPG
+src/albums/**/*.JPEG
+src/albums/**/*.png
+
+# Contains Cloudinary API secret — do not commit
+upload_to_cloudinary.mjs
