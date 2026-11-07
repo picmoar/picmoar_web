@@ -318,14 +318,6 @@ export default function PicMoAr() {
         if (rTargetR.current == null) setFocused(false)
       }
 
-      // Idle check — skip DOM writes when ring is fully settled
-      const isIdle = !rDragR.current
-        && Math.abs(rvR.current) < 0.005
-        && Math.abs(bendSR.current) < 0.05
-        && Math.abs(focusAmtR.current - (focusedR.current ? 1 : 0)) < 0.005
-      if (isIdle && ringIdleR.current) return
-      ringIdleR.current = isIdle
-
       ring.style.transform = `translateZ(${-R}px) rotateX(${tx_R.current}deg) rotateZ(${tz_R.current}deg)`
       const stg = ring.parentElement
       if (stg) stg.style.perspectiveOrigin = `${50 + tmxR.current*20}% ${50 + tmyR.current*25}%`
@@ -629,6 +621,22 @@ export default function PicMoAr() {
           </div>
         </div>
       )}
+
+      {/* Footer */}
+      <footer style={{ padding: '24px 32px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
+        <img src="/favicon.png" alt="PicMoAr" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} />
+        <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-.01em' }}>PicMoAr</span>
+        <span style={{ color: '#3a3835', fontSize: 14 }}>|</span>
+        <a href="https://www.instagram.com/picmoar" target="_blank" rel="noopener noreferrer"
+          style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 13, color: '#8d8a84', letterSpacing: '.04em', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, transition: 'color .15s' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#ecebe7'}
+          onMouseLeave={e => e.currentTarget.style.color = '#8d8a84'}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor" stroke="none"/>
+          </svg>
+          @picmoar
+        </a>
+      </footer>
 
       {/* Lightbox */}
       {open != null && cur != null && (
