@@ -32,8 +32,12 @@ for (const folder of albumFolders) {
   const cover = files.find(f => basename(f, extname(f)).toLowerCase().endsWith('_coverphoto'))
   const rest  = files.filter(f => f !== cover)
   albums[folder] = {
-    coverSrc:   cover ? url(`albums/${folder}/${basename(cover, extname(cover))}`) : null,
-    imageSrcs:  rest.map(f => url(`albums/${folder}/${basename(f, extname(f))}`)),
+    coverSrc:  cover ? url(`albums/${folder}/${basename(cover, extname(cover))}`) : null,
+    // cover first so it appears at the top of the album detail grid
+    imageSrcs: [
+      ...(cover ? [url(`albums/${folder}/${basename(cover, extname(cover))}`)] : []),
+      ...rest.map(f => url(`albums/${folder}/${basename(f, extname(f))}`)),
+    ],
   }
 }
 

@@ -117,6 +117,7 @@
     "01_SanDiego": {
       "coverSrc": "https://res.cloudinary.com/wxmg5gva/image/upload/albums/01_SanDiego/01_SanDiego_coverphoto.jpg",
       "imageSrcs": [
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/01_SanDiego/01_SanDiego_coverphoto.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/01_SanDiego/01_SanDiego_01.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/01_SanDiego/01_SanDiego_02.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/01_SanDiego/01_SanDiego_03.jpg",
@@ -128,6 +129,7 @@
     "02_Yosemite": {
       "coverSrc": "https://res.cloudinary.com/wxmg5gva/image/upload/albums/02_Yosemite/02_Yosemite_coverphoto.jpg",
       "imageSrcs": [
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/02_Yosemite/02_Yosemite_coverphoto.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/02_Yosemite/02_Yosemite_01.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/02_Yosemite/02_Yosemite_02.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/02_Yosemite/02_Yosemite_03.jpg",
@@ -146,6 +148,7 @@
     "03_NYC": {
       "coverSrc": "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_coverphoto.jpg",
       "imageSrcs": [
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_coverphoto.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_01.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_02.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_03.jpg",
@@ -163,12 +166,14 @@
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_15.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_16.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_17.jpg",
-        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_18.jpg"
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_18.jpg",
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/03_NYC/03_NYC_19.jpg"
       ]
     },
     "04_France": {
       "coverSrc": "https://res.cloudinary.com/wxmg5gva/image/upload/albums/04_France/04_France_coverphoto.jpg",
       "imageSrcs": [
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/04_France/04_France_coverphoto.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/04_France/04_France_01.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/04_France/04_France_02.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/04_France/04_France_03.jpg",
@@ -198,17 +203,20 @@
     "05_Arizona": {
       "coverSrc": "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_coverphoto.jpg",
       "imageSrcs": [
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_coverphoto.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_01.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_02.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_03.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_04.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_05.jpg",
-        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_06.jpg"
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_06.jpg",
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/05_Arizona/05_Arizona_07.jpg"
       ]
     },
     "06_yellowstone": {
       "coverSrc": "https://res.cloudinary.com/wxmg5gva/image/upload/albums/06_yellowstone/06_yellowstone_coverphoto.jpg",
       "imageSrcs": [
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/06_yellowstone/06_yellowstone_coverphoto.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/06_yellowstone/06_yellowstone_01.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/06_yellowstone/06_yellowstone_02.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/06_yellowstone/06_yellowstone_03.jpg",
@@ -229,6 +237,7 @@
     "07_austria": {
       "coverSrc": "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_coverphoto.jpg",
       "imageSrcs": [
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_coverphoto.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_01.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_02.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_03.jpg",
@@ -236,7 +245,10 @@
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_05.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_06.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_07.jpg",
-        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_08.jpg"
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_08.jpg",
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_09.jpg",
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_10.jpg",
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/07_austria/07_austria_11.jpg"
       ]
     },
     "08_Iceland": {
@@ -257,6 +269,7 @@
     "09_Japan": {
       "coverSrc": "https://res.cloudinary.com/wxmg5gva/image/upload/albums/09_Japan/09_Japan_coverphoto.jpg",
       "imageSrcs": [
+        "https://res.cloudinary.com/wxmg5gva/image/upload/albums/09_Japan/09_Japan_coverphoto.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/09_Japan/09_Japan_01.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/09_Japan/09_Japan_02.jpg",
         "https://res.cloudinary.com/wxmg5gva/image/upload/albums/09_Japan/09_Japan_03.jpg",

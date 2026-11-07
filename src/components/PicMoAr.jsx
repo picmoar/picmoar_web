@@ -15,7 +15,7 @@ function clUrl(src, transforms) {
 const thumb  = src => clUrl(src, 'f_auto,q_auto,w_500')   // canvas tiles
 const cover  = src => clUrl(src, 'f_auto,q_auto,w_800')   // album ring covers
 const medium = src => clUrl(src, 'f_auto,q_auto,w_900')   // album detail grid
-const full   = src => clUrl(src, 'f_auto,q_auto,w_1800')  // lightbox / fullscreen
+const full   = src => clUrl(src, 'f_auto,q_auto')          // lightbox / fullscreen — full original resolution
 
 const infoModules = import.meta.glob('../photos/*/info.json', { import: 'default', eager: true })
 
@@ -38,7 +38,8 @@ const DATA = manifest.photos
     return isNaN(an) || isNaN(bn) ? a.num.localeCompare(b.num) : an - bn
   })
 
-const TILE_COUNT = Math.max(3, DATA.length)
+const IS_MOBILE_INIT = window.innerWidth < 768
+const TILE_COUNT = IS_MOBILE_INIT ? Math.min(DATA.length, 12) : Math.max(3, DATA.length)
 
 const TILES = DATA.length === 0 ? [] : (() => {
   const placed = []
@@ -141,12 +142,13 @@ function PhotoSlot({ src, fallback, placeholder, fit = 'cover', natural = false,
           <span style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 10, color: '#3a3835', letterSpacing: '.04em', textTransform: 'uppercase' }}>{placeholder}</span>
         </div>
   }
+  const noSave = e => e.preventDefault()
   if (natural) {
-    return <img src={currentSrc} alt={placeholder} onError={onErr}
+    return <img src={currentSrc} alt={placeholder} onError={onErr} draggable={false} onContextMenu={noSave}
       style={{ display: 'block', width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: maxH ?? 'none' }} />
   }
   return (
-    <img src={currentSrc} alt={placeholder} onError={onErr}
+    <img src={currentSrc} alt={placeholder} onError={onErr} draggable={false} onContextMenu={noSave}
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit }} />
   )
 }
@@ -236,10 +238,23 @@ export default function PicMoAr() {
   const tmxR = useRef(0), tmyR = useRef(0)
   const bendSR = useRef(0), focusAmtR = useRef(0)
 
+  // DOM element caches — avoid querySelectorAll every frame
+  const cardElsR = useRef(null)
+  const tileElsR = useRef(null)
+  // Idle flags — skip DOM writes when nothing is moving
+  const ringIdleR = useRef(false)
+  const canvasIdleR = useRef(false)
+  // Last touch timestamp — pause auto-scroll briefly after touch
+  const lastTouchR = useRef(0)
+  // Mobile flag ref — readable inside rAF closure without re-creating the loop
+  const isMobileR = useRef(IS_MOBILE_INIT)
+  const mobileCarouselRef = useRef(null)
+
   // Mirrors of React state for use inside rAF
   const openR = useRef(null), frontR = useRef(0), focusedR = useRef(false)
   useEffect(() => { openR.current = open }, [open])
   useEffect(() => { frontR.current = frontIdx }, [frontIdx])
+  useEffect(() => { isMobileR.current = isMobile }, [isMobile])
   useEffect(() => { focusedR.current = focused }, [focused])
   useEffect(() => { albumPhotoOpenR.current = albumPhotoOpen }, [albumPhotoOpen])
   useEffect(() => {
@@ -262,8 +277,14 @@ export default function PicMoAr() {
     let raf
 
     const ringTick = () => {
-      const ring = document.querySelector('[data-ring="1"]')
-      if (!ring) return
+      if (isMobileR.current) return
+      // Lazy-cache card elements once
+      if (!cardElsR.current) {
+        const ring = document.querySelector('[data-ring="1"]')
+        if (!ring) return
+        cardElsR.current = { ring, cards: [...ring.querySelectorAll('[data-card]')] }
+      }
+      const { ring, cards } = cardElsR.current
       const n = ALBUMS.length, st = 360/n
       const R = Math.round(250 / (2 * Math.tan(Math.PI / Math.max(3, n))))
 
@@ -285,12 +306,11 @@ export default function PicMoAr() {
       bendSR.current += (bend - bendSR.current) * 0.15
       focusAmtR.current += ((focusedR.current ? 1 : 0) - focusAmtR.current) * 0.12
 
-      tx_R.current += (-tmyR.current * 24 - tx_R.current) * 0.07
-      tz_R.current += (tmxR.current * 6 - tz_R.current) * 0.07
-
-      ring.style.transform = `translateZ(${-R}px) rotateX(${tx_R.current}deg) rotateZ(${tz_R.current}deg)`
-      const stg = ring.parentElement
-      if (stg) stg.style.perspectiveOrigin = `${50 + tmxR.current*20}% ${50 + tmyR.current*25}%`
+      // Skip 3D tilt on mobile (mouse-only feature)
+      if (!isMobile) {
+        tx_R.current += (-tmyR.current * 24 - tx_R.current) * 0.07
+        tz_R.current += (tmxR.current * 6 - tz_R.current) * 0.07
+      }
 
       const fi = ((Math.round(-raR.current / st) % n) + n) % n
       if (fi !== frontR.current) {
@@ -298,8 +318,20 @@ export default function PicMoAr() {
         if (rTargetR.current == null) setFocused(false)
       }
 
-      ring.querySelectorAll('[data-card]').forEach(el => {
-        const i = +el.getAttribute('data-card')
+      // Idle check — skip DOM writes when ring is fully settled
+      const isIdle = !rDragR.current
+        && Math.abs(rvR.current) < 0.005
+        && Math.abs(bendSR.current) < 0.05
+        && Math.abs(focusAmtR.current - (focusedR.current ? 1 : 0)) < 0.005
+      if (isIdle && ringIdleR.current) return
+      ringIdleR.current = isIdle
+
+      ring.style.transform = `translateZ(${-R}px) rotateX(${tx_R.current}deg) rotateZ(${tz_R.current}deg)`
+      const stg = ring.parentElement
+      if (stg) stg.style.perspectiveOrigin = `${50 + tmxR.current*20}% ${50 + tmyR.current*25}%`
+
+      cards.forEach(el => {
+        const i = +el.dataset.card
         const th = i * st + raR.current
         const c = Math.cos(th * Math.PI / 180)
         const isF = i === fi
@@ -311,19 +343,31 @@ export default function PicMoAr() {
     }
 
     const tick = () => {
-      const pl = planeRef.current; if (!pl) return
-      let txv = 0, tyv = 0
       ringTick()
+      const pl = planeRef.current; if (!pl) return
+      // Lazy-cache tile elements once
+      if (!tileElsR.current) {
+        tileElsR.current = [...pl.querySelectorAll('[data-tile]')]
+      }
+      let txv = 0, tyv = 0
       if (mxR.current != null && openR.current == null) {
         const f = v => { const a=Math.abs(v); if(a<.25)return 0; const k=(a-.25)/.75; return Math.sign(v)*k*k }
         txv = -f(mxR.current)*14; tyv = -f(myR.current)*14
       }
-      if (txv===0 && tyv===0 && openR.current==null) { txv=-0.6; tyv=-0.27 }
+      // Auto-scroll: pause briefly after touch on mobile
+      const sinceTouch = Date.now() - lastTouchR.current
+      if (txv===0 && tyv===0 && openR.current==null && sinceTouch > 600) { txv=-0.6; tyv=-0.27 }
       vxR.current += (txv - vxR.current)*.06; vyR.current += (tyv - vyR.current)*.06
       oxR.current += vxR.current; oyR.current += vyR.current
+
+      // Skip tile DOM writes when canvas is idle
+      const moving = Math.abs(vxR.current) > 0.08 || Math.abs(vyR.current) > 0.08
+      if (!moving && canvasIdleR.current) return
+      canvasIdleR.current = !moving
+
       const md = (a,b) => ((a%b)+b)%b
-      pl.querySelectorAll('[data-tile]').forEach(el => {
-        const i = +el.getAttribute('data-tile'), d = TILES[i]; if(!d) return
+      tileElsR.current.forEach(el => {
+        const i = +el.dataset.tile, d = TILES[i]; if(!d) return
         el.style.transform = `translate3d(${md(d.bx+oxR.current+PAD,W)-PAD}px,${md(d.by+oyR.current+PAD,H)-PAD}px,0)`
       })
     }
@@ -356,7 +400,8 @@ export default function PicMoAr() {
 
   const handleRingDown = useCallback(e => {
     if (e.button !== 0) return
-    rDragR.current = true; rMovedR.current = 0; rTargetR.current = null
+    e.preventDefault()
+    rDragR.current = true; rMovedR.current = 0; rTargetR.current = null; ringIdleR.current = false
     let lx = e.clientX
     const mv = ev => { const dx=ev.clientX-lx; lx=ev.clientX; rMovedR.current+=Math.abs(dx); const sens=isMobile?.4:.22; raR.current+=dx*sens; rvR.current=dx*sens }
     const up = () => { rDragR.current=false; window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up) }
@@ -374,7 +419,14 @@ export default function PicMoAr() {
 
   const ringGo = useCallback((idx) => {
     const n = ALBUMS.length
-    rTargetR.current = nearest(((idx%n)+n)%n); setFocused(false)
+    const target = ((idx % n) + n) % n
+    if (isMobileR.current) {
+      setFrontIdx(target)
+      if (mobileCarouselRef.current)
+        mobileCarouselRef.current.scrollTo({ left: target * 236, behavior: 'smooth' })
+    } else {
+      rTargetR.current = nearest(target); setFocused(false)
+    }
   }, [nearest])
 
   const cur = DATA.length > 0 ? DATA[open ?? 0] : null
@@ -390,46 +442,76 @@ export default function PicMoAr() {
   return (
     <div style={{ background: '#0d0c0b', color: '#ecebe7', fontFamily: 'Archivo, Helvetica, sans-serif', minHeight: '100vh', overflowX: 'hidden' }}>
 
-      {/* Infinite scroll canvas */}
-      <div
-        onMouseMove={e => { const r=e.currentTarget.getBoundingClientRect(); mxR.current=(e.clientX-r.left-r.width/2)/(r.width/2); myR.current=(e.clientY-r.top-r.height/2)/(r.height/2) }}
-        onMouseLeave={() => { mxR.current = null }}
-        onTouchStart={e => { const t=e.touches[0]; tx0R.current=t.clientX; ty0R.current=t.clientY }}
-        onTouchMove={e => { const t=e.touches[0]; oxR.current+=t.clientX-tx0R.current; oyR.current+=t.clientY-ty0R.current; tx0R.current=t.clientX; ty0R.current=t.clientY }}
-        style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#0d0c0b', cursor: 'crosshair' }}>
+      {/* Canvas section — 2-row swipe grid on mobile, infinite physics canvas on desktop */}
+      {isMobile ? (
+        <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#0d0c0b' }}>
+          <div className="sl-blob sl-blob-1" />
+          <div className="sl-blob sl-blob-2" />
+          <div className="sl-blob sl-blob-3" />
 
-        {/* Safelight glow */}
-        <div className="sl-blob sl-blob-1" />
-        <div className="sl-blob sl-blob-2" />
-        <div className="sl-blob sl-blob-3" />
-
-        <div ref={planeRef} style={{ position: 'absolute', inset: 0 }}>
-          {TILES.map(t => (
-            <CanvasTile key={t.i} t={t} onOpen={e => { e.stopPropagation(); e.preventDefault(); mxR.current=null; vxR.current=vyR.current=0; setOpen(t.p) }} />
-          ))}
-        </div>
-
-        {/* Vignette */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', boxShadow: 'inset 0 0 220px 60px #0d0c0b' }} />
-
-        {/* Top bar */}
-        <div style={{ position: 'absolute', left: 32, right: 32, top: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', pointerEvents: 'none' }}>
-          <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: '-.02em' }}>PicMoAr</div>
-          <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>{DATA.length} photograph{DATA.length !== 1 ? 's' : ''}</div>
-        </div>
-
-        {/* Bottom bar */}
-        <div style={{ position: 'absolute', left: 32, right: 32, bottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none', fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'oklch(0.68 0.17 32)', display: 'inline-block' }} />
-            {isMobile ? 'Drag to explore' : 'Move toward an edge to explore'}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 3, paddingTop: 70, paddingBottom: 54 }}>
+            {[0, 1].map(row => (
+              <div key={row} style={{ flex: 1, minHeight: 0, overflowX: 'auto', overflowY: 'hidden', display: 'flex', gap: 3, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+                {DATA.filter((_, i) => i % 2 === row).map(d => (
+                  <div key={d.num} onClick={() => setOpen(DATA.indexOf(d))} style={{ flexShrink: 0, height: '100%', cursor: 'pointer' }}>
+                    <img src={medium(d.src)} alt={d.num} draggable={false} onContextMenu={e => e.preventDefault()}
+                      style={{ height: '100%', width: 'auto', display: 'block' }} />
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
-          <div>Click a photo to open</div>
+
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', boxShadow: 'inset 0 0 160px 40px #0d0c0b', zIndex: 1 }} />
+
+          <div style={{ position: 'absolute', left: 20, right: 20, top: 24, zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', pointerEvents: 'none' }}>
+            <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: '-.02em' }}>PicMoAr</div>
+            <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>{DATA.length} photograph{DATA.length !== 1 ? 's' : ''}</div>
+          </div>
+
+          <div style={{ position: 'absolute', left: 20, right: 20, bottom: 20, zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none', fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'oklch(0.68 0.17 32)', display: 'inline-block' }} />
+              Swipe to explore
+            </div>
+            <div>Tap to open</div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div
+          onMouseMove={e => { const r=e.currentTarget.getBoundingClientRect(); mxR.current=(e.clientX-r.left-r.width/2)/(r.width/2); myR.current=(e.clientY-r.top-r.height/2)/(r.height/2) }}
+          onMouseLeave={() => { mxR.current = null }}
+          style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#0d0c0b', cursor: 'crosshair' }}>
+
+          <div className="sl-blob sl-blob-1" />
+          <div className="sl-blob sl-blob-2" />
+          <div className="sl-blob sl-blob-3" />
+
+          <div ref={planeRef} style={{ position: 'absolute', inset: 0 }}>
+            {TILES.map(t => (
+              <CanvasTile key={t.i} t={t} onOpen={e => { e.stopPropagation(); e.preventDefault(); mxR.current=null; vxR.current=vyR.current=0; setOpen(t.p) }} />
+            ))}
+          </div>
+
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', boxShadow: 'inset 0 0 220px 60px #0d0c0b' }} />
+
+          <div style={{ position: 'absolute', left: 32, right: 32, top: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', pointerEvents: 'none' }}>
+            <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: '-.02em' }}>PicMoAr</div>
+            <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>{DATA.length} photograph{DATA.length !== 1 ? 's' : ''}</div>
+          </div>
+
+          <div style={{ position: 'absolute', left: 32, right: 32, bottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none', fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'oklch(0.68 0.17 32)', display: 'inline-block' }} />
+              Move toward an edge to explore
+            </div>
+            <div>Click a photo to open</div>
+          </div>
+        </div>
+      )}
 
       {/* Collections */}
-      <section style={{ position: 'relative', padding: '96px 32px 56px', borderTop: '1px solid #2a2724', display: 'flex', flexDirection: 'column', gap: 32, overflow: 'hidden' }}>
+      <section style={{ position: 'relative', padding: '112px 32px 72px', borderTop: '1px solid #2a2724', display: 'flex', flexDirection: 'column', gap: 32, overflow: 'hidden', minHeight: '100vh' }}>
         {/* World contours background */}
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/world-contours.svg)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', filter: 'sepia(1) hue-rotate(320deg) saturate(2) brightness(0.7)', opacity: 0.15, pointerEvents: 'none' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24, flexWrap: 'wrap' }}>
@@ -437,30 +519,54 @@ export default function PicMoAr() {
             <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: 'oklch(0.68 0.17 32)', letterSpacing: '.08em', textTransform: 'uppercase' }}>Albums</div>
             <h2 style={{ margin: 0, fontWeight: 800, fontSize: 'clamp(28px,4vw,52px)', lineHeight: .95, letterSpacing: '-.03em' }}>Collections</h2>
           </div>
-          <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>Drag to spin · Click to focus</div>
+          <div style={{ fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 12, color: '#8d8a84', letterSpacing: '.06em', textTransform: 'uppercase' }}>{isMobile ? 'Swipe · Tap to open' : 'Drag to spin · Click to focus'}</div>
         </div>
 
-        <div data-ring-stage="1"
-          onPointerDown={handleRingDown}
-          onMouseMove={e => { const r=e.currentTarget.getBoundingClientRect(); tmxR.current=(e.clientX-r.left)/r.width*2-1; tmyR.current=(e.clientY-r.top)/r.height*2-1 }}
-          onMouseLeave={() => { tmxR.current=0; tmyR.current=0 }}
-          style={{ height: 460, perspective: 1500, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', touchAction: 'none', userSelect: 'none' }}>
-          <div data-ring="1" style={{ position: 'relative', width: 220, height: 300, transformStyle: 'preserve-3d' }}>
+        {isMobile ? (
+          /* Mobile: flat snap carousel — no ring physics */
+          <div ref={mobileCarouselRef}
+            style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', gap: 16, padding: '0 calc(50% - 110px)', margin: '8px 0', WebkitOverflowScrolling: 'touch' }}
+            onScroll={e => {
+              const idx = Math.min(ALBUMS.length - 1, Math.max(0, Math.round(e.currentTarget.scrollLeft / 236)))
+              if (idx !== frontIdx) setFrontIdx(idx)
+            }}>
             {ALBUMS.map(a => (
-              <div key={a.i} data-card={a.i}
-                onClickCapture={e => { e.stopPropagation(); e.preventDefault(); if(rMovedR.current>6)return; ringClick(a.i) }}
-                style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 12, willChange: 'transform,opacity' }}>
-                <div className="pic-card-frame" style={{ flex: 1, minHeight: 0, position: 'relative', filter: 'grayscale(1) brightness(.85)', transition: 'filter .5s ease', boxShadow: '0 30px 70px rgba(0,0,0,.6)', outline: '1px solid rgba(236,235,231,.08)' }}>
+              <div key={a.i} style={{ flexShrink: 0, width: 220, scrollSnapAlign: 'center', cursor: 'pointer' }}
+                onClick={() => { if (a.i === frontIdx) setOpenAlbum(a.i) }}>
+                <div style={{ height: 300, position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,.6)', outline: '1px solid rgba(236,235,231,.08)', filter: a.i === frontIdx ? 'none' : 'grayscale(1) brightness(.55)', transition: 'filter .3s' }}>
                   <PhotoSlot src={a.coverSrc ? cover(a.coverSrc) : null} placeholder={`album ${a.num}`} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#8d8a84' }}>
+                <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 8, fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#8d8a84' }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
                   <span style={{ flexShrink: 0 }}>{a.count} photo{a.count !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        ) : (
+          /* Desktop: 3D ring carousel */
+          <div data-ring-stage="1"
+            onPointerDown={handleRingDown}
+            onMouseMove={e => { const r=e.currentTarget.getBoundingClientRect(); tmxR.current=(e.clientX-r.left)/r.width*2-1; tmyR.current=(e.clientY-r.top)/r.height*2-1 }}
+            onMouseLeave={() => { tmxR.current=0; tmyR.current=0 }}
+            style={{ height: 560, perspective: 1500, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', touchAction: 'none', userSelect: 'none' }}>
+            <div data-ring="1" style={{ position: 'relative', width: 220, height: 300, transformStyle: 'preserve-3d' }}>
+              {ALBUMS.map(a => (
+                <div key={a.i} data-card={a.i}
+                  onClickCapture={e => { e.stopPropagation(); e.preventDefault(); if(rMovedR.current>6)return; ringClick(a.i) }}
+                  style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 12, willChange: 'transform,opacity' }}>
+                  <div className="pic-card-frame" style={{ flex: 1, minHeight: 0, position: 'relative', filter: 'grayscale(1) brightness(.85)', transition: 'filter .5s ease', boxShadow: '0 30px 70px rgba(0,0,0,.6)', outline: '1px solid rgba(236,235,231,.08)' }}>
+                    <PhotoSlot src={a.coverSrc ? cover(a.coverSrc) : null} placeholder={`album ${a.num}`} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontFamily: "'Source Sans 3',system-ui,sans-serif", fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#8d8a84' }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
+                    <span style={{ flexShrink: 0 }}>{a.count} photo{a.count !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, flexWrap: 'wrap', borderTop: '1px solid #2a2724', paddingTop: 24 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, flexWrap: 'wrap' }}>
@@ -491,7 +597,7 @@ export default function PicMoAr() {
               <div key={photo.type === 'direct' ? `d-${idx}` : photo.num}
                 onClick={() => setAlbumPhotoOpen(idx)}
                 style={{ cursor: 'pointer', breakInside: 'avoid', marginBottom: 12 }}>
-                <img src={medium(photo.src)} alt={photo.title ?? ''}
+                <img src={medium(photo.src)} alt={photo.title ?? ''} draggable={false} onContextMenu={e => e.preventDefault()}
                   style={{ width: '100%', height: 'auto', display: 'block', filter: 'grayscale(1) brightness(.85)', transition: 'filter .3s' }}
                   onMouseEnter={e => e.currentTarget.style.filter = 'none'}
                   onMouseLeave={e => e.currentTarget.style.filter = 'grayscale(1) brightness(.85)'} />
@@ -506,7 +612,7 @@ export default function PicMoAr() {
       {albumPhotoOpen != null && currentAlbum && (
         <div onClick={() => setAlbumPhotoOpen(null)}
           style={{ position: 'fixed', inset: 0, zIndex: 150, background: 'rgba(13,12,11,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img src={currentAlbumPhotos[albumPhotoOpen]?.src ? full(currentAlbumPhotos[albumPhotoOpen].src) : undefined} style={{ maxWidth: '88vw', maxHeight: '88vh', objectFit: 'contain' }} onClick={e => e.stopPropagation()} />
+          <img src={currentAlbumPhotos[albumPhotoOpen]?.src ? full(currentAlbumPhotos[albumPhotoOpen].src) : undefined} draggable={false} onContextMenu={e => e.preventDefault()} style={{ maxWidth: '88vw', maxHeight: '88vh', objectFit: 'contain' }} onClick={e => e.stopPropagation()} />
           {currentAlbumPhotos.length > 1 && <>
             <div style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)' }} onClick={e => e.stopPropagation()}>
               <NavBtn onClick={() => setAlbumPhotoOpen(i => (i - 1 + currentAlbumPhotos.length) % currentAlbumPhotos.length)}>←</NavBtn>
